@@ -1,48 +1,33 @@
 require 'gomoku/game/brain'
 require 'gomoku/game/node'
 
+require 'benchmark/ips'
+
 module Gomoku
   class Game
     include Brain
 
-    def test(inits,n=1000)
-      wins = 0
-      lose = 0
-      draw = 0
+    def bench
+      board = Gomoku::Board.new(3);
+      board.push(:white, 0, 0)
+      board.push(:white, 1, 0)
+      board.push(:white, 2, 0)
+      board.push(:black, 1, 0)
+      board.push(:black, 1, 2)
+      board.push(:black, 2, 1)
 
-      n.times do |m|
-        board = Gomoku::Board.new(4)
-
-        turn = m % 2 == 0 ? :white : :black
-
-        inits.each do |x, y|
-          board.push(turn, x, y)
-          turn = next_turn(turn)
-        end
-
-        loop do
-          pos = board.available_positions.sample(1).first
-          if pos.nil?
-            draw += 1
-            break
-          end
-          board.push(turn, pos[0], pos[1])
-
-          if judge(board) == :white
-            wins += 1
-            break
-          elsif judge(board) == :black
-            lose += 1
-            break
-          end
-
-          turn = next_turn(turn)
-        end
+      node = Gomoku::Game::Node.new(board, :white)
+      Benchmark.ips do |x|
+        x.report("sorted_positions") { sorted_positions(node) }
+        x.report("evaluate") { evaluate(node, node.turn) }
+        x.report("evaluate_light") { evaluate_light(node, node.turn) }
+        x.report("evaluate.chances") { evaluate_chances(node, node.turn) }
+        x.report("evaluate.coordinates") { evaluate_coordinates(node, node.turn) }
+        x.report("evaluate.kills") { evaluate_kills(node, node.turn) }
+        x.report("evaluate.judge") { evaluate_judge(node, node.turn) }
+        x.report("node.judge") { judge(node.board) }
+        x.report("playout") { playout(node) }
       end
-
-      puts "WIN RATE:#{wins.to_f / n}"
-      puts "LOSE RATE:#{lose.to_f / n}"
-      puts "DRAW RATE:#{draw.to_f / n}"
     end
 
     def next_turn(turn)

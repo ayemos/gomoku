@@ -3,11 +3,12 @@ module Gomoku
     COLORS = %i(black white)
     DEFAULT_RADIUS = 4
 
-    attr_accessor :pins, :radius
+    attr_accessor :pins, :radius, :turns
 
     def initialize(radius=DEFAULT_RADIUS)
       @radius = radius
       @pins = Array.new(radius*radius){[]}
+      @turns = 0
     end
 
     def push(color, x, y)
@@ -23,6 +24,7 @@ module Gomoku
 
       @pins[x + y * @radius] << color
       undo_stack << [x, y]
+      @turns += 1
       @pins
     end
 
@@ -34,15 +36,14 @@ module Gomoku
 
       x, y = undo_stack.pop
       @pins[x + y * @radius].pop
+      @turns -= 1
     end
 
     def available_positions
       ret = []
-      @radius.times do |x|
-        @radius.times do |y|
-          if @pins[x + y * @radius].count < @radius
-            ret << [x, y]
-          end
+      Array(0..@radius-1).repeated_permutation(2) do |x, y|
+        if @pins[x + y * @radius].count < @radius
+          ret << [x, y]
         end
       end
 
@@ -63,17 +64,23 @@ module Gomoku
     end
 
     def pretty
-      @radius.times do |h|
-        puts "#{h + 1}-th layer"
-
+      (@radius-1).downto(0) do |h|
+        print "\t" * h
+        puts '┌' + '───┬' * (@radius - 1) + '───┐'
         @radius.times do |x|
-          @radius.times do |y|
-            print "#{to_3d_grid[x][y][h]},\t"
-          end
-          puts ''
-        end
+          print "\t" * h
 
-        puts ''
+          @radius.times do |y|
+            print "│ #{to_3d_grid[x][y][h].to_s.upcase[0] || ' '} "
+          end
+          puts '│'
+          print "\t" * h
+          if x == (@radius - 1)
+            puts '└' + '───┴' * (@radius - 1) + '───┘'
+          else
+            puts '├' + '───┼' * (@radius - 1) + '───┤'
+          end
+        end
       end
     end
 
